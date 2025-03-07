@@ -2,7 +2,6 @@ const express = require('express');
 const multer = require('multer');
 const cors = require('cors');
 const path = require('path');
-const fs = require('fs');
 const axios = require('axios');
 const pdfParse = require('pdf-parse');
 const { QdrantClient } = require('@qdrant/js-client-rest');
@@ -26,15 +25,13 @@ Format your response in a clear, engaging way:
   - Bold for important terms or key concepts
   - Separate distinct topics with line breaks
   - Use numbered lists for sequential information
-  - Include relevant quotes in a distinct paragraph, indented with ">"
 
 Your response should be:
 1. Direct and to the point
 2. Based only on the information from the PDF
 3. Well-structured and easy to read
-4. Include relevant quotes from the PDF when appropriate
 
-Remember to maintain a conversational yet professional tone, similar to ChatGPT.`;
+Remember to maintain a conversational yet professional tone.`;
 
 // Configuration Variables
 const CONFIG = {
@@ -92,7 +89,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-// Configure multer for PDF upload
+// Configure multer for PDF upload (in-memory only)
 const upload = multer({
     storage: multer.memoryStorage(),
     fileFilter: (req, file, cb) => {
@@ -174,7 +171,11 @@ async function searchVectorStore(collectionName, query) {
             limit: CONFIG.SEARCH_LIMIT
         });
 
-        return searchResult.map(result => result.payload.text);
+        return searchResult.map(result => ({
+            text: result.payload.text,
+            fileName: result.payload.fileName,
+            chunkIndex: result.payload.chunkIndex
+        }));
     } catch (error) {
         console.error('Error searching vector store:', error);
         throw error;
@@ -186,16 +187,10 @@ function generateSessionId() {
     return uuidv4();
 }
 
-// Function to get all collections for a session
-function getSessionCollections(sessionId) {
-    const session = sessions.get(sessionId);
-    return session ? session.collections : [];
-}
-
 // Function to create prompt from chunks and message
 function createChatPrompt(relevantChunks, message) {
     return CHAT_PROMPT_TEMPLATE
-        .replace('\${relevantChunks.join(\'\n\n\')}', relevantChunks.join('\n\n'))
+        .replace('\${relevantChunks.join(\'\n\n\')}', relevantChunks.map(chunk => chunk.text).join('\n\n'))
         .replace('\${message}', message);
 }
 
@@ -223,30 +218,22 @@ app.post('/upload', upload.single('pdf'), async (req, res) => {
             collectionName: collectionName
         });
 
-        // Get or create session ID from request
-        let sessionId = req.body.sessionId;
-        if (!sessionId || !sessions.has(sessionId)) {
-            sessionId = generateSessionId();
-            sessions.set(sessionId, { collections: [] });
-        }
-        
-        // Add new document info to session
-        const session = sessions.get(sessionId);
-        session.collections.push({
-            fileName: req.file.originalname,
-            collectionName: collectionName
+        // Create new session
+        const sessionId = generateSessionId();
+        sessions.set(sessionId, { 
+            collections: [{
+                fileName: req.file.originalname,
+                collectionName: collectionName
+            }]
         });
 
         res.json({ 
             success: true, 
             sessionId,
-            message: 'PDF uploaded and processed successfully',
-            collections: session.collections.map(c => ({ 
-                fileName: c.fileName, 
-                collectionName: c.collectionName 
-            }))
+            message: 'PDF processed successfully'
         });
     } catch (error) {
+        console.error('Error processing PDF:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -300,7 +287,15 @@ app.post('/chat', async (req, res) => {
                 try {
                     const data = JSON.parse(line);
                     if (data.response) {
-                        res.write(`data: ${JSON.stringify({ success: true, response: data.response })}\n\n`);
+                        res.write(`data: ${JSON.stringify({ 
+                            success: true, 
+                            response: data.response,
+                            sources: relevantChunks.map(chunk => ({
+                                fileName: chunk.fileName,
+                                chunkIndex: chunk.chunkIndex,
+                                text: chunk.text.substring(0, 150) + '...'
+                            }))
+                        })}\n\n`);
                     }
                 } catch (e) {
                     console.error('Error parsing chunk:', e);
@@ -326,41 +321,26 @@ app.post('/chat', async (req, res) => {
     }
 });
 
-// Cleanup route to remove specific document and its vectors
+// Cleanup endpoint for session management
 app.post('/cleanup', async (req, res) => {
     try {
-        const { sessionId, collectionName } = req.body;
+        const { sessionId } = req.body;
         const session = sessions.get(sessionId);
 
         if (session) {
-            // Find the specific collection
-            const collectionIndex = session.collections.findIndex(c => c.collectionName === collectionName);
-            
-            if (collectionIndex !== -1) {
-                const collection = session.collections[collectionIndex];
-                
-                // Delete the collection from Qdrant
-                await qdrant.deleteCollection(collection.collectionName);
-                
-                // Remove from session collections
-                session.collections.splice(collectionIndex, 1);
-                
-                // If no more collections, remove the session
-                if (session.collections.length === 0) {
-                    sessions.delete(sessionId);
+            // Delete all collections for this session
+            await Promise.all(session.collections.map(async (collection) => {
+                try {
+                    await qdrant.deleteCollection(collection.collectionName);
+                } catch (error) {
+                    console.error(`Error deleting collection ${collection.collectionName}:`, error);
                 }
-                
-                res.json({ 
-                    success: true, 
-                    message: 'Document cleaned up successfully',
-                    remainingCollections: session.collections.map(c => ({ 
-                        fileName: c.fileName, 
-                        collectionName: c.collectionName 
-                    }))
-                });
-            } else {
-                res.status(404).json({ error: 'Collection not found' });
-            }
+            }));
+            
+            // Remove session
+            sessions.delete(sessionId);
+            
+            res.json({ success: true, message: 'Session cleaned up successfully' });
         } else {
             res.status(404).json({ error: 'Session not found' });
         }

@@ -5,526 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>docuRAG.js</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <style>
-        :root {
-            --primary-color: #2563eb;
-            --primary-hover: #1d4ed8;
-            --bg-color: #f8fafc;
-            --card-bg: #ffffff;
-            --text-primary: #1e293b;
-            --text-secondary: #64748b;
-            --border-color: #e2e8f0;
-            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-            
-            /* Logo 1 - Cyberpunk Neon */
-            --logo1-gradient: linear-gradient(135deg, #FF0080, #7928CA);
-            
-            /* Logo 2 - Modern Metallic */
-            --logo2-gradient: linear-gradient(135deg, #B7B7B7, #E8E8E8, #FFFFFF, #B7B7B7);
-            
-            /* Logo 3 - Ocean Deep */
-            --logo3-gradient: linear-gradient(135deg, #0396FF, #0D47A1);
-            
-            /* Logo 4 - Dark Tech */
-            --logo4-gradient: linear-gradient(90deg, #1A1A1A, #333333);
-            
-            /* Logo 5 - Sunset Vibes */
-            --logo5-gradient: linear-gradient(135deg, #FF416C, #FF4B2B);
-            
-            /* Logo 6 - Matrix Green */
-            --logo6-gradient: linear-gradient(90deg, #00FF41, #003B00);
-            
-            /* Logo 7 - Golden Minimal */
-            --logo7-color: #FFD700;
-            
-            /* Logo 8 - Electric Blue */
-            --logo8-gradient: linear-gradient(90deg, #00C6FF, #0072FF);
-            
-            /* Logo 9 - Monochrome */
-            --logo9-color: #2D2D2D;
-            
-            /* Logo 10 - Holographic */
-            --logo10-gradient: linear-gradient(45deg, #FF0080, #FF00FF, #00FF00, #00FFFF, #FF0080);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-primary);
-            line-height: 1.5;
-            padding-top: 0;
-        }
-
-        .header {
-            width: 100%;
-            padding: 1rem 1.5rem;
-            background: rgba(248, 250, 252, 0.8);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .header-content {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .header h1 {
-            font-size: 1.75rem;
-            font-weight: 700;
-            margin: 0;
-            padding: 0;
-            letter-spacing: -0.025em;
-            color: #2563eb;
-            position: relative;
-        }
-
-        .header p {
-            margin: 0;
-            padding: 0.25rem 0.75rem;
-            font-size: 0.875rem;
-            color: var(--primary-color);
-            border: 1px solid var(--primary-color);
-            border-radius: 9999px;
-            background-color: rgba(37, 99, 235, 0.1);
-            font-weight: 500;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 1rem auto;
-            padding: 0 1rem;
-            display: grid;
-            grid-template-columns: 350px 1fr;
-            gap: 1.5rem;
-            height: calc(100vh - 2rem);
-        }
-
-        .sidebar {
-            background: var(--card-bg);
-            padding: 1.5rem;
-            border-radius: 1rem;
-            box-shadow: var(--shadow-md);
-            height: 100%;
-            overflow-y: auto;
-        }
-
-        .main-content {
-            background: var(--card-bg);
-            padding: 1.5rem;
-            border-radius: 1rem;
-            box-shadow: var(--shadow-md);
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            overflow-y: hidden;
-        }
-
-        /* Base logo styles */
-        h1 {
-            font-size: 1.8rem;
-            font-weight: 700;
-            position: relative;
-            letter-spacing: 0.05em;
-            display: block;
-            text-align: center;
-            padding: 0.5rem 0;
-            margin-bottom: 1.5rem;
-            color: var(--primary-color);
-        }
-
-        /* Remove all logo variant styles and animations */
-
-        h2 {
-            font-size: 1.5rem;
-            font-weight: 500;
-            margin-bottom: 1.5rem;
-            color: var(--text-primary);
-        }
-
-        .chat-container {
-            flex: 1;
-            overflow-y: auto;
-            border: 1px solid var(--border-color);
-            border-radius: 0.75rem;
-            padding: 1.5rem;
-            margin-bottom: 1rem;
-            background: var(--bg-color);
-        }
-
-        .message {
-            margin-bottom: 1.5rem;
-            padding: 1.25rem;
-            border-radius: 1rem;
-            max-width: 85%;
-            animation: fadeIn 0.3s ease-in-out;
-            line-height: 1.6;
-        }
-
-        /* Add styles for markdown elements */
-        .message strong {
-            font-weight: 700;
-            color: var(--text-primary);
-        }
-
-        .message ul {
-            margin: 1rem 0;
-            padding-left: 1.5rem;
-            list-style-type: none;
-        }
-
-        .message ul li::before {
-            content: "•";
-            color: var(--primary-color);
-            font-weight: bold;
-            display: inline-block;
-            width: 1em;
-            margin-left: -1em;
-        }
-
-        .message ol {
-            margin: 1rem 0;
-            padding-left: 1.5rem;
-        }
-
-        .message li {
-            margin: 0.5rem 0;
-        }
-
-        .message blockquote {
-            margin: 1rem 0;
-            padding: 0.75rem 1rem;
-            border-left: 4px solid var(--primary-color);
-            background: rgba(37, 99, 235, 0.05);
-            color: var(--text-primary);
-            font-style: italic;
-        }
-
-        .message p {
-            margin: 1rem 0;
-            line-height: 1.6;
-        }
-
-        .message h1, .message h2, .message h3 {
-            margin: 1.5rem 0 1rem 0;
-            font-weight: 700;
-            color: var(--text-primary);
-            line-height: 1.3;
-        }
-
-        .message h1 {
-            font-size: 1.5rem;
-        }
-
-        .message h2 {
-            font-size: 1.25rem;
-        }
-
-        .message h3 {
-            font-size: 1.1rem;
-        }
-
-        .message.thinking {
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-            margin-right: auto;
-            display: flex;
-            align-items: center;
-            padding: 1rem 1.5rem;
-        }
-
-        .message.thinking p {
-            margin: 0;
-            display: flex;
-            align-items: center;
-        }
-
-        .thinking-dots span {
-            opacity: 0;
-            margin-left: 2px;
-            animation: dotFade 1.5s infinite;
-        }
-
-        .thinking-dots span:nth-child(2) {
-            animation-delay: 0.5s;
-        }
-
-        .thinking-dots span:nth-child(3) {
-            animation-delay: 1s;
-        }
-
-        @keyframes dotFade {
-            0%, 100% { opacity: 0; }
-            50% { opacity: 1; }
-        }
-
-        .message .typing-indicator {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            background-color: var(--text-secondary);
-            border-radius: 50%;
-            margin-left: 4px;
-            animation: typing 1s infinite;
-        }
-
-        .message .typing-indicator:nth-child(2) {
-            animation-delay: 0.2s;
-        }
-
-        .message .typing-indicator:nth-child(3) {
-            animation-delay: 0.4s;
-        }
-
-        @keyframes typing {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-4px); }
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .user-message {
-            background-color: var(--primary-color);
-            color: white;
-            margin-left: auto;
-        }
-
-        .assistant-message {
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-            margin-right: auto;
-            font-size: 1rem;
-            line-height: 1.6;
-        }
-
-        .assistant-message p:first-of-type {
-            margin-top: 0;
-        }
-
-        .assistant-message p:last-of-type {
-            margin-bottom: 0;
-        }
-
-        .assistant-message code {
-            background-color: rgba(37, 99, 235, 0.1);
-            padding: 0.2em 0.4em;
-            border-radius: 0.25rem;
-            font-family: monospace;
-            font-size: 0.9em;
-        }
-
-        .drop-zone {
-            width: 100%;
-            padding: 2.5rem 2rem;
-            border: 2px dashed var(--border-color);
-            border-radius: 1rem;
-            margin-bottom: 1.5rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-align: center;
-            background: var(--bg-color);
-        }
-
-        .drop-zone .icon {
-            font-size: 3rem;
-            color: var(--text-secondary);
-            margin-bottom: 1rem;
-            cursor: pointer;
-            transition: transform 0.2s ease;
-        }
-
-        .drop-zone .icon:hover {
-            transform: scale(1.1);
-        }
-
-        .drop-zone:hover, .drop-zone.dragover {
-            border-color: var(--primary-color);
-            background: #eff6ff;
-        }
-
-        .drop-zone p {
-            color: var(--text-secondary);
-            margin: 0.75rem 0;
-            font-size: 1.1rem;
-        }
-
-        #pdf-preview {
-            width: 100%;
-            height: 450px;
-            border: 1px solid var(--border-color);
-            border-radius: 1rem;
-            margin: 1.5rem 0;
-            overflow: hidden;
-        }
-
-        .spinner {
-            width: 40px;
-            height: 40px;
-            margin: 1rem auto;
-            border: 3px solid var(--border-color);
-            border-top: 3px solid var(--primary-color);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .loading {
-            display: none;
-            text-align: center;
-            margin: 1.5rem 0;
-            color: var(--text-secondary);
-        }
-
-        .loading.active {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .simple-loader {
-            width: 30px;
-            height: 30px;
-            border: 2px solid var(--border-color);
-            border-radius: 50%;
-            border-top-color: var(--primary-color);
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .error {
-            display: none;
-            color: var(--text-secondary);
-            margin: 1.5rem 0;
-            padding: 1rem;
-            background: var(--bg-color);
-            border: 1px solid var(--border-color);
-            border-radius: 1rem;
-        }
-
-        .error.active {
-            display: block;
-        }
-
-        input[type="text"]:disabled, button:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            background-color: var(--bg-color);
-        }
-
-        .input-container {
-            display: flex;
-            gap: 1rem;
-            margin-top: auto;
-        }
-
-        input[type="text"] {
-            flex: 1;
-            padding: 1rem 1.25rem;
-            border: 1px solid var(--border-color);
-            border-radius: 1rem;
-            font-size: 1rem;
-            transition: all 0.2s ease;
-        }
-
-        input[type="file"] {
-            width: 100%;
-            padding: 0.75rem;
-            border: 2px dashed var(--border-color);
-            border-radius: 0.75rem;
-            margin-bottom: 1rem;
-            cursor: pointer;
-            transition: border-color 0.2s;
-        }
-
-        input[type="file"]:hover {
-            border-color: var(--primary-color);
-        }
-
-        button {
-            padding: 1rem 2rem;
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            border-radius: 1rem;
-            cursor: pointer;
-            font-weight: 500;
-            transition: all 0.2s ease;
-            font-size: 1rem;
-        }
-
-        button:hover {
-            background-color: var(--primary-hover);
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                margin: 1.5rem auto;
-                padding: 0 1rem;
-                grid-template-columns: 1fr;
-                gap: 1.5rem;
-            }
-
-            .main-content {
-                min-height: calc(100vh - 3rem);
-            }
-
-            .chat-container {
-                min-height: 400px;
-            }
-        }
-
-        .footer {
-            text-align: center;
-            padding: 1.5rem;
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-            border-top: 1px solid var(--border-color);
-            margin-top: 2rem;
-        }
-
-        .footer a {
-            color: var(--primary-color);
-            text-decoration: none;
-            transition: color 0.2s ease;
-        }
-
-        .footer a:hover {
-            color: var(--primary-hover);
-            text-decoration: underline;
-        }
-    </style>
 </head>
 <body>
     <header class="header">
         <div class="header-content">
             <h1>docuRAG.js</h1>
-            <p>Chat with your PDF documents</p>
+            <p>💡 Chat with your PDF documents</p>
         </div>
     </header>
-    <div class="container">
+    
+    <main class="container">
         <div class="sidebar">
             <div class="drop-zone" id="drop-zone">
                 <div class="icon" onclick="document.getElementById('pdf-upload').click()">📄</div>
@@ -537,49 +29,41 @@
             </div>
             <div class="error" id="upload-error"></div>
             <div id="pdf-preview"></div>
-            <button onclick="handleReset()">Reset</button>
+            <button onclick="handleReset()">Start Over</button>
         </div>
+        
         <div class="main-content">
             <div class="chat-container" id="chat-container"></div>
             <div class="input-container">
                 <input type="text" id="user-input" placeholder="Ask a question about your PDF..." disabled>
-                <button onclick="sendMessage()" id="send-button" disabled>Send</button>
+                <button id="mic-button" onclick="toggleMic()" disabled>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                        <line x1="12" y1="19" x2="12" y2="23"></line>
+                        <line x1="8" y1="23" x2="16" y2="23"></line>
+                    </svg>
+                </button>
             </div>
         </div>
-    </div>
+    </main>
+    
     <footer class="footer">
-        <p style="margin-bottom: 1rem;">Chat with your PDF documents using RAG (Retrieval-Augmented Generation) technology</p>
-        <div style="margin-bottom: 1rem;">            
-            <span style="color: var(--text-secondary);">
+        <p>Chat with your PDF documents using RAG (Retrieval-Augmented Generation)</p>
+        <div class="footer-links">            
+            <span>
                 <a href="https://qdrant.tech/" target="_blank" rel="noopener noreferrer">Qdrant Vector DB</a> • 
                 <a href="https://ollama.ai/" target="_blank" rel="noopener noreferrer">Ollama</a> • 
                 <a href="https://ai.meta.com/llama/" target="_blank" rel="noopener noreferrer">LLama2</a>
             </span>
         </div>
-        Built by <a href="http://msroot.me/" target="_blank" rel="noopener noreferrer">Yannis Kolovos</a>
+        <div class="footer-credit">
+            Built by <a href="http://msroot.me/" target="_blank" rel="noopener noreferrer">Yannis Kolovos</a>
+        </div>
     </footer>
 
     <script>
         let currentSessionId = null;
-
-        // Cleanup function
-        async function cleanupSession() {
-            if (currentSessionId) {
-                try {
-                    await fetch('http://localhost:3000/cleanup', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ sessionId: currentSessionId })
-                    });
-                } catch (error) {
-                    console.error('Error cleaning up session:', error);
-                }
-                currentSessionId = null;
-                disableChat(true);
-            }
-        }
 
         // Drag and drop handlers
         const dropZone = document.getElementById('drop-zone');
@@ -621,26 +105,23 @@
             }
         }
 
-        // Modified PDF Upload Handler
+        // Modified PDF Upload Handler - Now just processes the PDF without storing
         async function handleFileUpload(file) {
             if (!file || file.type !== 'application/pdf') {
                 showError('Please upload a valid PDF file.');
                 return;
             }
 
-            // Clean up previous session
-            await cleanupSession();
-
-            const formData = new FormData();
-            formData.append('pdf', file);
-
             // Show loading state and hide any previous error
             document.getElementById('upload-loading').classList.add('active');
-            document.getElementById('drop-zone').style.display = 'none';
+            document.getElementById('drop-zone').classList.add('hidden');
             hideError();
             disableChat(true);
 
             try {
+                const formData = new FormData();
+                formData.append('pdf', file);
+
                 const response = await fetch('http://localhost:3000/upload', {
                     method: 'POST',
                     body: formData
@@ -649,24 +130,29 @@
                 
                 if (data.success) {
                     currentSessionId = data.sessionId;
-                    // Display PDF preview
+                    // Display PDF preview with animation
                     const pdfUrl = URL.createObjectURL(file);
-                    document.getElementById('pdf-preview').innerHTML = `
+                    const pdfPreview = document.getElementById('pdf-preview');
+                    pdfPreview.innerHTML = `
                         <iframe src="${pdfUrl}" width="100%" height="100%"></iframe>
                     `;
+                    // Trigger animation after a short delay
+                    setTimeout(() => {
+                        pdfPreview.classList.add('active');
+                    }, 100);
+                    
                     // Set input placeholder with filename
                     document.getElementById('user-input').placeholder = `Ask me about ${file.name}...`;
                     // Clear chat history and enable chat
                     clearChat();
                     disableChat(false);
                 } else {
-                    throw new Error(data.error || 'Failed to upload PDF');
-                    document.getElementById('drop-zone').style.display = 'block';
+                    throw new Error(data.error || 'Failed to process PDF');
                 }
             } catch (error) {
-                console.error('Error uploading PDF:', error);
+                console.error('Error processing PDF:', error);
                 showError(error.message);
-                document.getElementById('drop-zone').style.display = 'block';
+                document.getElementById('drop-zone').classList.remove('hidden');
             } finally {
                 document.getElementById('upload-loading').classList.remove('active');
             }
@@ -683,7 +169,7 @@
         // Function to disable/enable chat
         function disableChat(disabled) {
             document.getElementById('user-input').disabled = disabled;
-            document.getElementById('send-button').disabled = disabled;
+            document.getElementById('mic-button').disabled = disabled;
         }
 
         // Update the addMessageToChat function
@@ -771,15 +257,7 @@
                                 const data = JSON.parse(line.slice(6));
                                 if (data.success) {
                                     fullResponse += data.response;
-                                    // Configure marked options
-                                    marked.setOptions({
-                                        breaks: true,
-                                        gfm: true,
-                                        headerIds: false
-                                    });
-                                    // Parse and render markdown for the full response
                                     messageDiv.innerHTML = marked.parse(fullResponse);
-                                    // Smooth scroll to bottom
                                     const chatContainer = document.getElementById('chat-container');
                                     chatContainer.scrollTo({
                                         top: chatContainer.scrollHeight,
@@ -811,9 +289,6 @@
             }
         });
 
-        // Cleanup on page unload
-        window.addEventListener('beforeunload', cleanupSession);
-
         // Error handling functions
         function showError(message) {
             const errorDiv = document.getElementById('upload-error');
@@ -828,11 +303,62 @@
         }
 
         function handleReset() {
-            document.getElementById('drop-zone').style.display = 'block';
-            document.getElementById('pdf-preview').innerHTML = '';
-            document.getElementById('upload-error').classList.remove('active');
-            document.getElementById('upload-loading').classList.remove('active');
+            const dropZone = document.getElementById('drop-zone');
+            const pdfPreview = document.getElementById('pdf-preview');
+            
+            // Hide PDF preview with animation
+            pdfPreview.classList.remove('active');
+            
+            // Show drop zone after a short delay
+            setTimeout(() => {
+                dropZone.classList.remove('hidden');
+                pdfPreview.innerHTML = '';
+                document.getElementById('upload-error').classList.remove('active');
+                document.getElementById('upload-loading').classList.remove('active');
+            }, 300);
+
             window.location.reload();
+        }
+
+        // Add Speech Recognition functionality
+        let recognition = null;
+        let isListening = false;
+
+        if ('webkitSpeechRecognition' in window) {
+            recognition = new webkitSpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            recognition.onresult = function(event) {
+                const transcript = event.results[0][0].transcript;
+                document.getElementById('user-input').value = transcript;
+                toggleMic(); // Turn off mic after getting result
+            };
+
+            recognition.onerror = function(event) {
+                console.error('Speech recognition error:', event.error);
+                toggleMic(); // Turn off mic on error
+            };
+        }
+
+        function toggleMic() {
+            const micButton = document.getElementById('mic-button');
+            
+            if (!recognition) {
+                console.error('Speech recognition not supported');
+                return;
+            }
+
+            if (!isListening) {
+                recognition.start();
+                isListening = true;
+                micButton.classList.add('listening');
+            } else {
+                recognition.stop();
+                isListening = false;
+                micButton.classList.remove('listening');
+            }
         }
     </script>
 </body>

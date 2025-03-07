@@ -1,123 +1,124 @@
-# docuRAG.js 🤖
+# docuRAG.js
 
-A modern, interactive web application that allows users to chat with their PDF documents using RAG (Retrieval-Augmented Generation) and LLM technology.
+An open-source Node.js library for building RAG-powered PDF question-answering systems. docuRAG.js provides a complete solution for implementing Retrieval-Augmented Generation using Qdrant vector database and Ollama's LLM API.
 
-## ✨ Features
+## Library Features
 
-- **PDF Processing**: Upload and process PDF documents with ease
-- **Interactive Chat**: Have natural conversations about your PDF content
-- **Real-time Responses**: Stream responses as they're generated
-- **Modern UI**: Clean, responsive interface with beautiful animations
-- **Markdown Support**: Well-formatted responses with support for:
-  - Bold text and headers
-  - Bullet points and numbered lists
-  - Block quotes
-  - Code snippets
-- **File Management**: 
-  - Drag & drop file upload
-  - PDF preview
-  - Session management
-  - Automatic cleanup
+### Core Functionality
+- PDF text extraction and processing
+- Document chunking and embedding generation
+- Vector similarity search with Qdrant
+- LLM-based response generation with Llama2
+- Real-time streaming responses
+- Voice input support
 
-## 🛠️ Technology Stack
+### Technical Capabilities
+- Configurable chunking strategies
+- Customizable embedding generation
+- Extensible vector store integration
+- Flexible LLM prompt engineering
+- Session-based document management
+- Server-Sent Events implementation
 
-- **Frontend**:
-  - HTML5/CSS3
-  - Vanilla JavaScript
-  - Server-Sent Events (SSE) for streaming
-  - Marked.js for markdown rendering
-  - Inter font family
+## Technical Overview
 
-- **Backend**:
-  - Node.js & Express
-  - Qdrant Vector Database
-  - Local LLM integration
-  - PDF parsing capabilities
+### Core Components
+- **Frontend**: HTML5, CSS3, Vanilla JavaScript for the client interface
+- **Backend**: Node.js/Express server for request handling
+- **Vector Store**: Qdrant for embedding storage and similarity search
+- **LLM Integration**: Ollama API with Llama2 for text generation
+- **Document Processing**: PDF parsing and chunking with vector embedding
 
-## 🚀 Getting Started
+### Key Features
+- Document chunking and embedding generation
+- Vector similarity search for context retrieval
+- Streaming response generation
+- Voice input processing
+- Server-Sent Events for real-time communication
+- Session-based document management
 
-### Prerequisites
+## Implementation Setup
 
-- Node.js (v14 or higher)
-- Docker (for Qdrant)
-- Ollama
+### System Requirements
+- Node.js >= 14
+- Docker for Qdrant container
+- macOS v11+ (Big Sur) or compatible OS for Ollama
+- 8GB RAM minimum recommended
 
-### Step 1: Install Qdrant Vector Database
+### Vector Database Setup
+```bash
+# Run Qdrant using Docker
+docker run -p 6333:6333 -p 6334:6334 qdrant/qdrant
 
-1. Install and run Qdrant using Docker:
-   ```bash
-   docker run -p 6333:6333 -p 6334:6334 qdrant/qdrant
-   ```
+# Verify installation
+curl http://localhost:6333/collections  # REST API
+# Web UI available at http://localhost:6334
+```
 
-2. Verify Qdrant is running:
-   - REST API will be available at `http://localhost:6333`
-   - Web UI will be available at `http://localhost:6334`
+### LLM Configuration
+```bash
+# Install Ollama from https://ollama.ai/download
+# Pull Llama model (tested with llama3.2)
+ollama run llama3.2
 
-### Step 2: Install and Setup Ollama
+# Verify installation
+curl http://localhost:11434/api/tags
+```
 
-1. Download and install Ollama:
-   - Visit [Ollama Download Page](https://ollama.com/download)
-   - Follow the installation instructions for your OS
-   - For macOS: requires macOS 11 Big Sur or later
+### Application Setup
+```bash
+# Clone repository
+git clone https://github.com/msroot/docuRAG.js.git
+cd docuRAG.js
 
-2. Pull and run the LLama model:
-   ```bash
-   ollama run llama3.2
-   ```
-   This will:
-   - Download the model if not present
-   - Start the Ollama server on `http://localhost:11434`
+# Install dependencies
+npm install
 
-### Step 3: Install docuRAG.js
+# Configure environment
+cat > .env << EOL
+PORT=3000
+QDRANT_URL=http://localhost:6333
+LLM_URL=http://localhost:11434
+LLM_MODEL=llama3.2
+EOL
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/docuRAG.js.git
-   cd docuRAG.js
-   ```
+# Start server
+npm start
+```
 
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
+## Technical Architecture
 
-3. Start the server:
-   ```bash
-   npm start
-   ```
+### Document Processing Pipeline
+- PDF text extraction using pdf-parse
+- Text chunking with 1000-token size and 200-token overlap
+- Embedding generation via Ollama API
+- Vector storage in Qdrant collections
 
-4. Open your browser and navigate to `http://localhost:3000`
+### Query Processing
+- Question embedding generation
+- Top-K similarity search (default K=3)
+- Context-based response generation
+- Real-time response streaming
 
-### Verify Installation
+## Development and Contributing
 
-Ensure all components are running:
-1. Qdrant UI should be accessible at `http://localhost:6334`
-2. Ollama should be running with llama3.2 model
-3. docuRAG.js server should be running on `http://localhost:3000`
+Areas for technical contributions:
+- Performance optimization strategies
+- Alternative embedding implementations
+- Enhanced chunking algorithms
+- Additional vector store integrations
+- Improved prompt engineering
 
-## 💡 Usage
+## License
 
-1. **Upload a PDF**:
-   - Drag and drop a PDF file onto the upload zone
-   - Or click the file icon to browse your files
+MIT License - see [LICENSE](LICENSE)
 
-2. **Chat with your PDF**:
-   - Wait for the PDF to be processed
-   - Type your question in the chat input
-   - Get AI-powered responses based on your document's content
+## References
 
-3. **Reset Session**:
-   - Click the Reset button to clear the current session
-   - Upload a new PDF to start a fresh conversation
+- [Qdrant Documentation](https://qdrant.tech/documentation/)
+- [Ollama API Reference](https://ollama.ai/docs)
+- [LangChain Text Splitters](https://js.langchain.com/docs/modules/data_connection/document_transformers/)
 
-## 🤝 Contributing
+---
 
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 👤 Author
-
-Built by [Yannis Kolovos](http://msroot.me/) 
+Developed by [Yannis Kolovos](http://msroot.me/) 
