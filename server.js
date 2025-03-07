@@ -40,7 +40,6 @@ Remember to maintain a conversational yet professional tone, similar to ChatGPT.
 const CONFIG = {
     // Server Configuration
     PORT: process.env.PORT || 3000,
-    UPLOAD_DIR: process.env.UPLOAD_DIR || 'uploads',
 
     // Qdrant Configuration
     QDRANT_URL: process.env.QDRANT_URL || 'http://localhost:6333',
@@ -94,20 +93,8 @@ app.use(express.json());
 app.use(express.static('public'));
 
 // Configure multer for PDF upload
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        if (!fs.existsSync(CONFIG.UPLOAD_DIR)) {
-            fs.mkdirSync(CONFIG.UPLOAD_DIR);
-        }
-        cb(null, CONFIG.UPLOAD_DIR);
-    },
-    filename: function (req, file, cb) {
-        cb(null, Date.now() + '-' + file.originalname);
-    }
-});
-
 const upload = multer({
-    storage: storage,
+    storage: multer.memoryStorage(),
     fileFilter: (req, file, cb) => {
         if (file.mimetype === 'application/pdf') {
             cb(null, true);
@@ -118,10 +105,9 @@ const upload = multer({
 });
 
 // Function to read PDF content
-async function readPDFContent(filePath) {
+async function readPDFContent(pdfBuffer) {
     try {
-        const dataBuffer = fs.readFileSync(filePath);
-        const data = await pdfParse(dataBuffer);
+        const data = await pdfParse(pdfBuffer);
         return data.text;
     } catch (error) {
         console.error('Error reading PDF:', error);
@@ -228,8 +214,8 @@ app.post('/upload', upload.single('pdf'), async (req, res) => {
         // Create new collection for this document
         await createCollection(collectionName);
         
-        // Read PDF content
-        const pdfContent = await readPDFContent(req.file.path);
+        // Read PDF content from buffer
+        const pdfContent = await readPDFContent(req.file.buffer);
         
         // Add to vector store
         await addToVectorStore(pdfContent, {
@@ -247,7 +233,6 @@ app.post('/upload', upload.single('pdf'), async (req, res) => {
         // Add new document info to session
         const session = sessions.get(sessionId);
         session.collections.push({
-            pdfPath: req.file.path,
             fileName: req.file.originalname,
             collectionName: collectionName
         });
@@ -354,9 +339,6 @@ app.post('/cleanup', async (req, res) => {
             if (collectionIndex !== -1) {
                 const collection = session.collections[collectionIndex];
                 
-                // Delete the PDF file
-                fs.unlinkSync(collection.pdfPath);
-                
                 // Delete the collection from Qdrant
                 await qdrant.deleteCollection(collection.collectionName);
                 
@@ -393,5 +375,4 @@ app.listen(CONFIG.PORT, () => {
     console.log('- Qdrant URL:', CONFIG.QDRANT_URL);
     console.log('- LLM URL:', CONFIG.LLM_URL);
     console.log('- LLM Model:', CONFIG.LLM_MODEL);
-    console.log('- Upload Directory:', CONFIG.UPLOAD_DIR);
 }); 
