@@ -202,18 +202,32 @@
             margin-right: auto;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-        }
-
-        .message.thinking .spinner {
-            width: 20px;
-            height: 20px;
-            margin: 0;
-            border-width: 2px;
+            padding: 1rem 1.5rem;
         }
 
         .message.thinking p {
             margin: 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .thinking-dots span {
+            opacity: 0;
+            margin-left: 2px;
+            animation: dotFade 1.5s infinite;
+        }
+
+        .thinking-dots span:nth-child(2) {
+            animation-delay: 0.5s;
+        }
+
+        .thinking-dots span:nth-child(3) {
+            animation-delay: 1s;
+        }
+
+        @keyframes dotFade {
+            0%, 100% { opacity: 0; }
+            50% { opacity: 1; }
         }
 
         .message .typing-indicator {
@@ -347,8 +361,17 @@
             gap: 0.5rem;
         }
 
-        .loading.active .spinner {
-            display: block;
+        .simple-loader {
+            width: 30px;
+            height: 30px;
+            border: 2px solid var(--border-color);
+            border-radius: 50%;
+            border-top-color: var(--primary-color);
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
 
         .error {
@@ -465,7 +488,7 @@
                 <input type="file" id="pdf-upload" accept=".pdf" style="display: none;">
             </div>
             <div class="loading" id="upload-loading">
-                <div class="spinner"></div>
+                <div class="simple-loader"></div>
                 <p>Processing PDF...</p>
             </div>
             <div class="error" id="upload-error"></div>
@@ -628,25 +651,24 @@
             if (role === 'assistant' && content === 'Thinking...') {
                 messageDiv.className = 'message thinking';
                 messageDiv.innerHTML = `
-                    <div class="spinner"></div>
-                    <p>Thinking</p>
+                    <p>Thinking<span class="thinking-dots"><span>.</span><span>.</span><span>.</span></span></p>
                 `;
             } else if (role === 'assistant') {
-                // Configure marked options
                 marked.setOptions({
                     breaks: true,
                     gfm: true,
                     headerIds: false
                 });
-                // Parse markdown for assistant messages
                 messageDiv.innerHTML = marked.parse(content);
             } else {
-                // Regular text for user messages
                 messageDiv.textContent = content;
             }
             
             chatContainer.appendChild(messageDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
+            chatContainer.scrollTo({
+                top: chatContainer.scrollHeight,
+                behavior: 'smooth'
+            });
             return messageDiv;
         }
 
@@ -713,7 +735,12 @@
                                     });
                                     // Parse and render markdown for the full response
                                     messageDiv.innerHTML = marked.parse(fullResponse);
-                                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                                    // Smooth scroll to bottom
+                                    const chatContainer = document.getElementById('chat-container');
+                                    chatContainer.scrollTo({
+                                        top: chatContainer.scrollHeight,
+                                        behavior: 'smooth'
+                                    });
                                 }
                             } catch (e) {
                                 console.error('Error parsing chunk:', e);
