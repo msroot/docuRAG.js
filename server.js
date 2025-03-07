@@ -9,6 +9,30 @@ const { RecursiveCharacterTextSplitter } = require('langchain/text_splitter');
 const { v4: uuidv4 } = require('uuid');
 require('dotenv').config();
 
+
+
+// Configuration Variables
+const CONFIG = {
+    // Server Configuration
+    PORT: process.env.PORT || 3000,
+
+    // Qdrant Configuration
+    QDRANT_URL: process.env.QDRANT_URL || 'http://localhost:6333',
+    VECTOR_SIZE: 3072,
+    VECTOR_DISTANCE: 'Cosine',
+
+    // LLM Configuration
+    LLM_URL: process.env.LLM_URL || 'http://localhost:11434',
+    LLM_MODEL: process.env.LLM_MODEL || 'llama3.2',
+    
+    // Text Splitting Configuration
+    CHUNK_SIZE: 1000,
+    CHUNK_OVERLAP: 200,
+    
+    // Search Configuration
+    SEARCH_LIMIT: 3
+};
+
 // Prompt template for chat responses
 const CHAT_PROMPT_TEMPLATE = `You are a helpful AI assistant that answers questions about PDF documents. You have access to the following relevant sections from the PDF:
 
@@ -33,27 +57,6 @@ Your response should be:
 
 Remember to maintain a conversational yet professional tone.`;
 
-// Configuration Variables
-const CONFIG = {
-    // Server Configuration
-    PORT: process.env.PORT || 3000,
-
-    // Qdrant Configuration
-    QDRANT_URL: process.env.QDRANT_URL || 'http://localhost:6333',
-    VECTOR_SIZE: 3072,
-    VECTOR_DISTANCE: 'Cosine',
-
-    // LLM Configuration
-    LLM_URL: process.env.LLM_URL || 'http://localhost:11434',
-    LLM_MODEL: process.env.LLM_MODEL || 'llama3.2',
-    
-    // Text Splitting Configuration
-    CHUNK_SIZE: 1000,
-    CHUNK_OVERLAP: 200,
-    
-    // Search Configuration
-    SEARCH_LIMIT: 3
-};
 
 const app = express();
 
