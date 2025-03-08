@@ -36,7 +36,8 @@ const docuRAG = new DocuRAG({
 ### Prerequisites
 - Node.js >= 14
 - Running Qdrant instance
-- Local LLM server (e.g., Ollama)
+- Local LLM server (e.g., Ollama with Llama2)
+  > ⚠️ Note: Currently tested and optimized for Llama2. Other models may work but are not officially supported.
 
 ### Installation
 
@@ -80,11 +81,24 @@ await docuRAG.cleanup(sessionId);
     // Vector Store Configuration
     qdrantUrl: string,      // Qdrant server URL
     vectorSize: number,     // Embedding vector size (default: 3072)
+                           // Size depends on your LLM model:
+                           // - OpenAI ada-002: 1536
+                           // - Llama2: 3072 (4096 for 70B model)
+                           // - Mistral: 1024
+                           // See: https://qdrant.tech/documentation/concepts/vectors/
     vectorDistance: string, // Distance metric (default: 'Cosine')
+                           // Available options:
+                           // - 'Cosine': Best for semantic similarity, normalizes vector magnitude
+                           // - 'Dot': Similar to cosine but considers magnitude
+                           // - 'Euclid': Geometric distance between vectors
+                           // - 'Manhattan': Fast "city block" distance, good for high dimensions
+                           // See: https://qdrant.tech/documentation/concepts/search/#metrics
 
     // LLM Configuration
     llmUrl: string,        // LLM server URL
     llmModel: string,      // Model name (default: 'llama3.2')
+                          // Note: Currently tested only with Llama2
+                          // Other models may work but are not officially supported
 
     // Text Processing
     chunkSize: number,     // Token chunk size (default: 1000)
