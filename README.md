@@ -1,113 +1,143 @@
 # docuRAG.js
 
-An open-source Node.js library for building RAG-powered PDF question-answering systems. docuRAG.js provides a complete solution for implementing Retrieval-Augmented Generation using Qdrant vector database and Ollama's LLM API.
+A modern Node.js library for building RAG-powered document question-answering systems. docuRAG.js provides a streamlined solution for implementing Retrieval-Augmented Generation using Qdrant vector database and local LLM integration.
 
-## Library Features
+## Core Features
 
-### Core Functionality
-- PDF text extraction and processing
-- Document chunking and embedding generation
-- Vector similarity search with Qdrant
-- LLM-based response generation with Llama2
-- Real-time streaming responses
-- Voice input support
-
-### Technical Capabilities
-- Configurable chunking strategies
-- Customizable embedding generation
-- Extensible vector store integration
-- Flexible LLM prompt engineering
-- Session-based document management
-- Server-Sent Events implementation
-
-## Technical Overview
-
-### Core Components
-- **Frontend**: HTML5, CSS3, Vanilla JavaScript for the client interface
-- **Backend**: Node.js/Express server for request handling
-- **Vector Store**: Qdrant for embedding storage and similarity search
-- **LLM Integration**: Ollama API with Llama2 for text generation
-- **Document Processing**: PDF parsing and chunking with vector embedding
-
-### Key Features
-- Document chunking and embedding generation
-- Vector similarity search for context retrieval
-- Streaming response generation
-- Voice input processing
-- Server-Sent Events for real-time communication
-- Session-based document management
-
-## Implementation Setup
-
-### System Requirements
-- Node.js >= 14
-- Docker for Qdrant container
-- macOS v11+ (Big Sur) or compatible OS for Ollama
-- 8GB RAM minimum recommended
-
-### Vector Database Setup
-```bash
-# Run Qdrant using Docker
-docker run -p 6333:6333 -p 6334:6334 qdrant/qdrant
-
-# Verify installation
-curl http://localhost:6333/collections  # REST API
-# Web UI available at http://localhost:6334
-```
-
-### LLM Configuration
-```bash
-# Install Ollama from https://ollama.ai/download
-# Pull Llama model (tested with llama3.2)
-ollama run llama3.2
-
-# Verify installation
-curl http://localhost:11434/api/tags
-```
-
-### Application Setup
-```bash
-# Clone repository
-git clone https://github.com/msroot/docuRAG.js.git
-cd docuRAG.js
-
-# Install dependencies
-npm install
-
-# Configure environment
-cat > .env << EOL
-PORT=3000
-QDRANT_URL=http://localhost:6333
-LLM_URL=http://localhost:11434
-LLM_MODEL=llama3.2
-EOL
-
-# Start server
-npm start
-```
+- **PDF Processing**: Automatic PDF text extraction and chunking
+- **Vector Storage**: Seamless integration with Qdrant for embedding storage
+- **LLM Integration**: Flexible local LLM support with streaming responses
+- **Session Management**: Built-in session handling for document contexts
+- **Middleware Support**: Express-compatible upload middleware
+- **Streaming Responses**: Server-Sent Events (SSE) for real-time chat responses
 
 ## Technical Architecture
 
 ### Document Processing Pipeline
-- PDF text extraction using pdf-parse
-- Text chunking with 1000-token size and 200-token overlap
-- Embedding generation via Ollama API
-- Vector storage in Qdrant collections
+```javascript
+const docuRAG = new DocuRAG({
+    qdrantUrl: 'http://localhost:6333',
+    llmUrl: 'http://localhost:11434',
+    llmModel: 'llama3.2'
+});
+```
 
-### Query Processing
-- Question embedding generation
-- Top-K similarity search (default K=3)
-- Context-based response generation
-- Real-time response streaming
+- Configurable chunk size (default: 1000 tokens)
+- Adjustable chunk overlap (default: 200 tokens)
+- Automatic collection management in Qdrant
+- Cosine similarity for vector matching
+- Configurable search limit for context retrieval
 
-## Development and Contributing
+### Core Components
 
-Areas for technical contributions:
-- Performance optimization strategies
-- Alternative embedding implementations
-- Enhanced chunking algorithms
+- **Vector Store**: Qdrant for efficient similarity search
+- **Text Processing**: RecursiveCharacterTextSplitter from LangChain
+- **File Handling**: Multer for PDF upload processing
+- **Streaming**: Server-Sent Events for real-time responses
+- **Session Management**: In-memory session tracking with cleanup
+
+## Quick Start
+
+### Prerequisites
+- Node.js >= 14
+- Running Qdrant instance
+- Local LLM server (e.g., Ollama)
+
+### Installation
+
+```bash
+npm install docurag
+```
+
+### Basic Usage
+
+```javascript
+import { DocuRAG } from 'docurag';
+import express from 'express';
+
+const app = express();
+const docuRAG = new DocuRAG({
+    qdrantUrl: 'http://localhost:6333',
+    llmUrl: 'http://localhost:11434'
+});
+
+// File upload endpoint
+app.post('/upload', docuRAG.getUploadMiddleware(), async (req, res) => {
+    const result = await docuRAG.processPDF(req.file);
+    res.json({ sessionId: result.sessionId });
+});
+
+// Chat endpoint with streaming
+app.post('/chat', async (req, res) => {
+    const { sessionId, message } = req.body;
+    
+    res.setHeader('Content-Type', 'text/event-stream');
+    await docuRAG.streamChat(sessionId, message, {
+        onData: (data) => res.write(`data: ${JSON.stringify(data)}\n\n`),
+        onEnd: () => res.end()
+    });
+});
+```
+
+## Configuration Options
+
+```javascript
+{
+    // Vector Store Configuration
+    qdrantUrl: string,      // Qdrant server URL
+    vectorSize: number,     // Embedding vector size (default: 3072)
+    vectorDistance: string, // Distance metric (default: 'Cosine')
+
+    // LLM Configuration
+    llmUrl: string,        // LLM server URL
+    llmModel: string,      // Model name (default: 'llama3.2')
+
+    // Text Processing
+    chunkSize: number,     // Token chunk size (default: 1000)
+    chunkOverlap: number,  // Overlap between chunks (default: 200)
+
+    // Search Configuration
+    searchLimit: number    // Context chunks to retrieve (default: 3)
+}
+```
+
+## API Reference
+
+### DocuRAG Class
+
+#### Constructor
+```javascript
+new DocuRAG(config?: DocuRAGConfig)
+```
+
+#### Methods
+- `processPDF(file: Express.Multer.File)`: Process and store PDF document
+- `chat(sessionId: string, message: string)`: Get chat response data
+- `streamChat(sessionId: string, message: string, callbacks: StreamCallbacks)`: Stream chat responses
+- `cleanup(sessionId: string)`: Clean up session resources
+- `getUploadMiddleware()`: Get PDF upload middleware
+
+## Development Setup
+
+### Vector Database
+```bash
+docker run -p 6333:6333 qdrant/qdrant
+```
+
+### LLM Server (using Ollama)
+```bash
+# Install from https://ollama.ai
+ollama run llama3.2
+```
+
+## Contributing
+
+Areas for contribution:
 - Additional vector store integrations
-- Improved prompt engineering
+- Alternative LLM providers
+- Enhanced chunking strategies
+- Performance optimizations
+- Testing infrastructure
 
 ## License
 
@@ -116,9 +146,9 @@ MIT License - see [LICENSE](LICENSE)
 ## References
 
 - [Qdrant Documentation](https://qdrant.tech/documentation/)
-- [Ollama API Reference](https://ollama.ai/docs)
-- [LangChain Text Splitters](https://js.langchain.com/docs/modules/data_connection/document_transformers/)
+- [LangChain JS](https://js.langchain.com/)
+- [Express.js](https://expressjs.com/)
+- [Multer](https://github.com/expressjs/multer)
 
 ---
-
 Developed by [Yannis Kolovos](http://msroot.me/) 
