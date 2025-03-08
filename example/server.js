@@ -1,16 +1,21 @@
 import express from 'express';
-import cors from 'cors';
 import multer from 'multer';
 import { DocuRAG } from '../index.js';
+import cors from 'cors';
 
 // Initialize express app with security defaults
 const app = express();
 
+// Middleware setup with security headers
+app.use(cors());
+app.use(express.json());  // Add this BEFORE routes
+app.use(express.static('public'));
+
 // Initialize DocuRAG instance with production configuration
 // Ensure these URLs are configured via environment variables in production
 const docuRAG = new DocuRAG({
-    qdrantUrl: process.env.QDRANT_URL || 'http://localhost:6333',
-    llmUrl: process.env.LLM_URL || 'http://localhost:11434'
+    qdrantUrl: 'http://localhost:6333',
+    llmUrl: 'http://localhost:11434'
 });
 
 // Configure multer for secure PDF upload
@@ -29,18 +34,6 @@ const upload = multer({
         }
     }
 });
-
-// Middleware setup with security headers
-app.use(cors({
-    origin: process.env.ALLOWED_ORIGINS || '*', // Configure allowed origins in production
-    methods: ['GET', 'POST'],
-    allowedHeaders: ['Content-Type']
-}));
-app.use(express.json({ limit: '1mb' }));
-app.use(express.static('public', {
-    maxAge: '1h',
-    etag: true
-}));
 
 // Routes
 app.post('/upload', upload.single('pdf'), async (req, res) => {
@@ -81,13 +74,21 @@ app.post('/upload', upload.single('pdf'), async (req, res) => {
 // Handles real-time chat interactions with the processed PDF
 app.post('/chat', async (req, res) => {
     try {
+        // Validate request body
+        if (!req.body || typeof req.body !== 'object') {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid request body'
+            });
+        }
+
         const { message } = req.body;
 
-        // Validate message presence
+        // Validate message
         if (!message || typeof message !== 'string') {
             return res.status(400).json({
                 success: false,
-                error: 'Invalid or missing message'
+                error: 'Message is required and must be a string'
             });
         }
 

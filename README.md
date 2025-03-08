@@ -2,7 +2,7 @@
 
 A modern Node.js library for building RAG-powered document question-answering systems. docuRAG.js provides a streamlined solution for implementing Retrieval-Augmented Generation using Qdrant vector database and local LLM integration.
 
-![docuRAG.js Demo](https://raw.githubusercontent.com/msroot/docuRAG.js/main/docs/demo.png)
+![docuRAG.js Demo](https://raw.githubusercontent.com/msroot/docuRAG.js/main/docs/demo.gif)
 
 ## Core Features
 
@@ -23,12 +23,6 @@ const docuRAG = new DocuRAG({
     llmModel: 'llama3.2'
 });
 ```
-
-- Configurable chunk size (default: 1000 tokens)
-- Adjustable chunk overlap (default: 200 tokens)
-- Automatic collection management in Qdrant
-- Cosine similarity for vector matching
-- Configurable search limit for context retrieval
 
 ### Core Components
 
