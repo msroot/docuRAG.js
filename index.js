@@ -7,31 +7,28 @@ import { v4 as uuidv4 } from 'uuid';
 export class DocuRAG {
     constructor(config = {}) {
         this.config = {
-            // Qdrant Configuration
-            qdrantUrl: config.qdrantUrl || 'http://localhost:6333',
-            vectorSize: config.vectorSize || 3072,
-            vectorDistance: config.vectorDistance || 'Cosine',
-
-            // LLM Configuration
-            llmUrl: config.llmUrl || 'http://localhost:11434',
-            llmModel: config.llmModel || 'llama3.2',
-            
-            // Text Splitting Configuration
-            chunkSize: config.chunkSize || 1000,
-            chunkOverlap: config.chunkOverlap || 200,
-            
-            // Search Configuration
-            searchLimit: config.searchLimit || 3
+            // Default configuration
+            qdrantUrl: 'http://localhost:6333',
+            vectorSize: 3072,
+            vectorDistance: 'Cosine',
+            llmUrl: 'http://localhost:11434',
+            llmModel: 'llama3.2',
+            chunkSize: 1000,
+            chunkOverlap: 200,
+            searchLimit: 3,
+            ...config
         };
 
         // Initialize clients and tools
         this.qdrant = new QdrantClient({ url: this.config.qdrantUrl });
-        this.sessions = new Map();
         this.textSplitter = new RecursiveCharacterTextSplitter({
             chunkSize: this.config.chunkSize,
             chunkOverlap: this.config.chunkOverlap,
             lengthFunction: (text) => text.length,
         });
+
+        // Track current active collection
+        this.currentCollection = null;
     }
 
     async getEmbeddings(text) {
@@ -121,28 +118,20 @@ export class DocuRAG {
         }
     }
 
-    generateSessionId() {
-        return uuidv4();
-    }
-
     async processPDFBuffer(pdfBuffer, fileName) {
         try {
-            const sessionId = this.generateSessionId();
+            // Clean up existing collection if any
+            if (this.currentCollection) {
+                try {
+                    await this.qdrant.deleteCollection(this.currentCollection.collectionName);
+                } catch (error) {
+                    console.error(`Error deleting collection ${this.currentCollection.collectionName}:`, error);
+                }
+            }
+
             const docName = fileName.replace('.pdf', '').replace(/[^a-zA-Z0-9]/g, '_');
             const timestamp = Date.now();
             const collectionName = `${docName}_${timestamp}`;
-            
-            // Clean up any existing collections for this session if they exist
-            const existingSession = this.sessions.get(sessionId);
-            if (existingSession) {
-                await Promise.all(existingSession.collections.map(async (collection) => {
-                    try {
-                        await this.qdrant.deleteCollection(collection.collectionName);
-                    } catch (error) {
-                        console.error(`Error deleting collection ${collection.collectionName}:`, error);
-                    }
-                }));
-            }
             
             await this.createCollection(collectionName);
             
@@ -153,126 +142,81 @@ export class DocuRAG {
                 collectionName: collectionName
             });
 
-            // Set new session with single collection
-            this.sessions.set(sessionId, { 
-                collections: [{
-                    fileName: fileName,
-                    collectionName: collectionName
-                }]
-            });
+            // Store current collection info
+            this.currentCollection = {
+                fileName: fileName,
+                collectionName: collectionName
+            };
 
-            return { sessionId };
+            return { collectionName };
         } catch (error) {
             console.error('Error processing PDF:', error);
             throw error;
         }
     }
 
-    async chat(sessionId, message, callbacks = null) {
+    async chat(message, callbacks = null) {
+        if (!this.currentCollection) {
+            throw new Error('No document has been processed yet');
+        }
+
+        const relevantChunks = await this.searchVectorStore(this.currentCollection.collectionName, message);
+        const prompt = this.createChatPrompt(relevantChunks, message);
+        const sources = relevantChunks.map(chunk => ({
+            fileName: chunk.fileName,
+            chunkIndex: chunk.chunkIndex,
+            text: chunk.text.substring(0, 150) + '...'
+        }));
+
+        const requestConfig = {
+            model: this.config.llmModel,
+            prompt: prompt,
+            ...(callbacks && { stream: true })
+        };
+
         try {
-            const session = this.sessions.get(sessionId);
-
-            if (!session) {
-                throw new Error('Session not found');
+            if (!callbacks) {
+                const { data } = await axios.post(`${this.config.llmUrl}/api/generate`, requestConfig);
+                return { success: true, response: data.response, sources };
             }
 
-            let relevantChunks;
-            if (session.collections.length === 1) {
-                relevantChunks = await this.searchVectorStore(session.collections[0].collectionName, message);
-            } else if (session.collections.length > 1) {
-                const allChunks = await Promise.all(
-                    session.collections.map(collection => 
-                        this.searchVectorStore(collection.collectionName, message)
-                    )
-                );
-                relevantChunks = allChunks.flat();
-            } else {
-                throw new Error('No documents found in session');
-            }
+            const { data } = await axios.post(`${this.config.llmUrl}/api/generate`, requestConfig, {
+                responseType: 'stream'
+            });
 
-            const prompt = this.createChatPrompt(relevantChunks, message);
-
-            if (callbacks) {
-                // Streaming mode
-                const response = await axios.post(`${this.config.llmUrl}/api/generate`, {
-                    model: this.config.llmModel,
-                    prompt: prompt,
-                    stream: true
-                }, {
-                    responseType: 'stream'
-                });
-
-                response.data.on('data', chunk => {
-                    const lines = chunk.toString().split('\n').filter(Boolean);
-                    for (const line of lines) {
-                        try {
-                            const data = JSON.parse(line);
-                            if (data.response) {
-                                callbacks.onData({
-                                    success: true,
-                                    response: data.response,
-                                    sources: relevantChunks.map(chunk => ({
-                                        fileName: chunk.fileName,
-                                        chunkIndex: chunk.chunkIndex,
-                                        text: chunk.text.substring(0, 150) + '...'
-                                    }))
-                                });
-                            }
-                        } catch (e) {
-                            console.error('Error parsing chunk:', e);
+            data.on('data', chunk => {
+                const lines = chunk.toString().split('\n').filter(Boolean);
+                lines.forEach(line => {
+                    try {
+                        const { response } = JSON.parse(line);
+                        if (response) {
+                            callbacks.onData({ success: true, response, sources });
                         }
+                    } catch (e) {
+                        console.error('Error parsing chunk:', e);
                     }
                 });
+            });
 
-                response.data.on('end', () => {
-                    if (callbacks.onEnd) callbacks.onEnd();
-                });
-
-                response.data.on('error', error => {
-                    console.error('Stream error:', error);
-                    if (callbacks.onError) callbacks.onError('Error processing your request');
-                });
-            } else {
-                // Non-streaming mode
-                const response = await axios.post(`${this.config.llmUrl}/api/generate`, {
-                    model: this.config.llmModel,
-                    prompt: prompt
-                });
-
-                return {
-                    success: true,
-                    response: response.data.response,
-                    sources: relevantChunks.map(chunk => ({
-                        fileName: chunk.fileName,
-                        chunkIndex: chunk.chunkIndex,
-                        text: chunk.text.substring(0, 150) + '...'
-                    }))
-                };
-            }
+            data.on('end', () => callbacks.onEnd?.());
+            data.on('error', error => {
+                console.error('Stream error:', error);
+                callbacks.onError?.('Error processing your request');
+            });
         } catch (error) {
             console.error('Error in chat:', error);
             throw error;
         }
     }
 
-    async cleanup(sessionId) {
+    async cleanup() {
         try {
-            const session = this.sessions.get(sessionId);
-
-            if (!session) {
-                throw new Error('Session not found');
+            if (this.currentCollection) {
+                await this.qdrant.deleteCollection(this.currentCollection.collectionName);
+                this.currentCollection = null;
+                return true;
             }
-
-            await Promise.all(session.collections.map(async (collection) => {
-                try {
-                    await this.qdrant.deleteCollection(collection.collectionName);
-                } catch (error) {
-                    console.error(`Error deleting collection ${collection.collectionName}:`, error);
-                }
-            }));
-            
-            this.sessions.delete(sessionId);
-            return true;
+            return false;
         } catch (error) {
             console.error('Error in cleanup:', error);
             throw error;
@@ -281,13 +225,16 @@ export class DocuRAG {
 
     createChatPrompt(relevantChunks, userMessage) {
         const context = relevantChunks.map(chunk => chunk.text).join('\n\n');
-        return `You are a helpful AI assistant. Use the following context to answer the user's question.
-If you cannot find the answer in the context, say so - do not make up information.
-
-Context:
+        return `Context from document:
 ${context}
 
-User Question: ${userMessage}
-`;
+Question: ${userMessage}
+
+Response Guidelines:
+• Format your response using bullet points when listing multiple items
+• Keep answers clear and professional
+• Focus on key information from the provided context
+• Use markdown formatting for emphasis when needed
+• If information isn't in the context, respond: "This information is not found in the provided document."`;
     }
 } 
