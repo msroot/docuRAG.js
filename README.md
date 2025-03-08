@@ -108,20 +108,38 @@ docker run -p 6333:6333 qdrant/qdrant
 ollama run llama3.2
 ```
 
-## Example Implementation
+## Example Implementations
 
-Check out the [example](./example) directory for a complete Express.js implementation with:
+Check out our example implementations:
+
+### [Express Example](./examples/express)
+A complete Express.js implementation with:
 - Beautiful UI with drag & drop
 - Real-time chat with streaming
 - Voice input support
 - PDF preview
 - Source citations
 
-To run the example:
+### [NestJS Example](./examples/nest)
+A complete NestJS implementation with the same features:
+- Beautiful UI with drag & drop
+- Real-time chat with streaming
+- Voice input support
+- PDF preview
+- Source citations
+
+To run the examples:
+
 ```bash
-cd example
+# For Express
+cd examples/express
 npm install
 npm start
+
+# For NestJS
+cd examples/nest
+npm install
+npm run start:dev
 ```
 
 ## Contributing

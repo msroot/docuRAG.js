@@ -1,7 +1,13 @@
 import express from 'express';
 import multer from 'multer';
-import { DocuRAG } from '../index.js';
+import { DocuRAG } from '../../index.js';
 import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Get current directory
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Initialize express app with security defaults
 const app = express();
@@ -9,7 +15,7 @@ const app = express();
 // Middleware setup with security headers
 app.use(cors());
 app.use(express.json());  // Add this BEFORE routes
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Initialize DocuRAG instance with production configuration
 // Ensure these URLs are configured via environment variables in production

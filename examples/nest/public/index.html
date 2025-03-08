@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>docuRAG.js</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <h1>docuRAG.js</h1>
+            <p>💡 Chat with your PDF documents</p>
+        </div>
+    </header>
+    
+    <main class="container">
+        <div class="sidebar">
+            <div class="drop-zone" id="drop-zone">
+                <div class="icon" onclick="document.getElementById('pdf-upload').click()">📄</div>
+                <p>Drop your PDF here</p>
+                <input type="file" id="pdf-upload" accept=".pdf" style="display: none;">
+            </div>
+            <div class="loading" id="upload-loading">
+                <div class="simple-loader"></div>
+                <p>Processing PDF...</p>
+            </div>
+            <div class="error" id="upload-error"></div>
+            <div id="pdf-preview"></div>
+            <button onclick="handleReset()">Start Over</button>
+        </div>
+        
+        <div class="main-content">
+            <div class="chat-container" id="chat-container"></div>
+            <div class="input-container">
+                <input type="text" id="user-input" placeholder="Ask a question about your PDF..." disabled>
+                <button id="mic-button" onclick="toggleMic()" disabled>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                        <line x1="12" y1="19" x2="12" y2="23"></line>
+                        <line x1="8" y1="23" x2="16" y2="23"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </main>
+    
+    <footer class="footer">
+        <p>Chat with your PDF documents using RAG (Retrieval-Augmented Generation)</p>
+        <div class="footer-links">            
+            <span>
+                <a href="https://qdrant.tech/" target="_blank" rel="noopener noreferrer">Qdrant Vector DB</a> • 
+                <a href="https://ollama.ai/" target="_blank" rel="noopener noreferrer">Ollama</a> • 
+                <a href="https://ai.meta.com/llama/" target="_blank" rel="noopener noreferrer">LLama2</a>
+            </span>
+        </div>
+        <div class="footer-credit">
+            Built by <a href="http://msroot.me/" target="_blank" rel="noopener noreferrer">Yannis Kolovos</a>
+        </div>
+    </footer>
+
+    <script>
+        let currentSessionId = null;
+
+        // Drag and drop handlers
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('pdf-upload');
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight(e) {
+            dropZone.classList.add('dragover');
+        }
+
+        function unhighlight(e) {
+            dropZone.classList.remove('dragover');
+        }
+
+        dropZone.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                handleFileUpload(files[0]);
+            }
+        }
+
+        // Modified PDF Upload Handler - Now just processes the PDF without storing
+        async function handleFileUpload(file) {
+            if (!file || file.type !== 'application/pdf') {
+                showError('Please upload a valid PDF file.');
+                return;
+            }
+
+            // Show loading state and hide any previous error
+            document.getElementById('upload-loading').classList.add('active');
+            document.getElementById('drop-zone').classList.add('hidden');
+            hideError();
+            disableChat(true);
+
+            try {
+                const formData = new FormData();
+                formData.append('pdf', file);
+
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to upload PDF');
+                }
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Display PDF preview with animation
+                    const pdfUrl = URL.createObjectURL(file);
+                    const pdfPreview = document.getElementById('pdf-preview');
+                    pdfPreview.innerHTML = `
+                        <iframe src="${pdfUrl}" width="100%" height="100%"></iframe>
+                    `;
+                    // Trigger animation after a short delay
+                    setTimeout(() => {
+                        pdfPreview.classList.add('active');
+                    }, 100);
+                    
+                    // Set input placeholder with filename
+                    document.getElementById('user-input').placeholder = `Ask me about ${file.name}...`;
+                    // Clear chat history and enable chat
+                    clearChat();
+                    disableChat(false);
+                } else {
+                    throw new Error(data.error || 'Failed to process PDF');
+                }
+            } catch (error) {
+                console.error('Error processing PDF:', error);
+                showError(error.message || 'Failed to upload PDF');
+                document.getElementById('drop-zone').classList.remove('hidden');
+            } finally {
+                document.getElementById('upload-loading').classList.remove('active');
+            }
+        }
+
+        // Update the file input change handler
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                handleFileUpload(file);
+            }
+        });
+
+        // Function to disable/enable chat
+        function disableChat(disabled) {
+            document.getElementById('user-input').disabled = disabled;
+            document.getElementById('mic-button').disabled = disabled;
+        }
+
+        // Update the addMessageToChat function
+        function addMessageToChat(role, content, isStreaming = false) {
+            const chatContainer = document.getElementById('chat-container');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}-message`;
+            
+            if (role === 'assistant' && content === 'Thinking...') {
+                messageDiv.className = 'message thinking';
+                messageDiv.innerHTML = `
+                    <p>Thinking<span class="thinking-dots"><span>.</span><span>.</span><span>.</span></span></p>
+                `;
+            } else if (role === 'assistant') {
+                marked.setOptions({
+                    breaks: true,
+                    gfm: true,
+                    headerIds: false
+                });
+                messageDiv.innerHTML = marked.parse(content);
+            } else {
+                messageDiv.textContent = content;
+            }
+            
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTo({
+                top: chatContainer.scrollHeight,
+                behavior: 'smooth'
+            });
+            return messageDiv;
+        }
+
+        // Send Message Handler
+        async function sendMessage() {
+            const input = document.getElementById('user-input');
+            const message = input.value.trim();
+            if (!message) return;
+
+            // Add user message to chat
+            addMessageToChat('user', message);
+            input.value = '';
+
+            // Add thinking message
+            const thinkingMessage = addMessageToChat('assistant', 'Thinking...');
+
+            try {
+                const response = await fetch('http://localhost:3000/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ message })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to get response');
+                }
+
+                // Remove thinking message
+                thinkingMessage.remove();
+                
+                // Create new assistant message div
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'message assistant-message';
+                document.getElementById('chat-container').appendChild(messageDiv);
+
+                // Set up event source for streaming
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let fullResponse = '';
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n').filter(Boolean);
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const eventData = line.slice(6);
+                                if (eventData === '[DONE]') {
+                                    // Stream completed
+                                    continue;
+                                }
+
+                                const data = JSON.parse(eventData);
+                                if (!data.success) {
+                                    messageDiv.innerHTML = marked.parse('Error: ' + (data.error || 'Unknown error'));
+                                    continue;
+                                }
+
+                                if (data.response) {
+                                    fullResponse += data.response;
+                                    messageDiv.innerHTML = marked.parse(fullResponse);
+                                    const chatContainer = document.getElementById('chat-container');
+                                    chatContainer.scrollTo({
+                                        top: chatContainer.scrollHeight,
+                                        behavior: 'smooth'
+                                    });
+                                }
+                            } catch (e) {
+                                console.error('Error parsing chunk:', e);
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error sending message:', error);
+                thinkingMessage.remove();
+                addMessageToChat('assistant', 'Sorry, there was an error processing your request.');
+            }
+        }
+
+        // Clear chat
+        function clearChat() {
+            document.getElementById('chat-container').innerHTML = '';
+        }
+
+        // Handle Enter key in input
+        document.getElementById('user-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Error handling functions
+        function showError(message) {
+            const errorDiv = document.getElementById('upload-error');
+            errorDiv.textContent = message;
+            errorDiv.classList.add('active');
+        }
+
+        function hideError() {
+            const errorDiv = document.getElementById('upload-error');
+            errorDiv.textContent = '';
+            errorDiv.classList.remove('active');
+        }
+
+        function handleReset() {
+            const dropZone = document.getElementById('drop-zone');
+            const pdfPreview = document.getElementById('pdf-preview');
+            
+            // Hide PDF preview with animation
+            pdfPreview.classList.remove('active');
+            
+            // Show drop zone after a short delay
+            setTimeout(() => {
+                dropZone.classList.remove('hidden');
+                pdfPreview.innerHTML = '';
+                document.getElementById('upload-error').classList.remove('active');
+                document.getElementById('upload-loading').classList.remove('active');
+            }, 300);
+
+            window.location.reload();
+        }
+
+        // Add Speech Recognition functionality
+        let recognition = null;
+        let isListening = false;
+
+        if ('webkitSpeechRecognition' in window) {
+            recognition = new webkitSpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            recognition.onresult = function(event) {
+                const transcript = event.results[0][0].transcript;
+                document.getElementById('user-input').value = transcript;
+                toggleMic(); // Turn off mic after getting result
+            };
+
+            recognition.onerror = function(event) {
+                console.error('Speech recognition error:', event.error);
+                toggleMic(); // Turn off mic on error
+            };
+        }
+
+        function toggleMic() {
+            const micButton = document.getElementById('mic-button');
+            
+            if (!recognition) {
+                console.error('Speech recognition not supported');
+                return;
+            }
+
+            if (!isListening) {
+                recognition.start();
+                isListening = true;
+                micButton.classList.add('listening');
+            } else {
+                recognition.stop();
+                isListening = false;
+                micButton.classList.remove('listening');
+            }
+        }
+    </script>
+</body>
+</html> 
