@@ -2,13 +2,15 @@
 
 A modern Node.js library for building RAG-powered document question-answering systems. docuRAG.js provides a streamlined solution for implementing Retrieval-Augmented Generation using Qdrant vector database and local LLM integration.
 
+![docuRAG.js Demo](https://raw.githubusercontent.com/msroot/docuRAG.js/main/docs/demo.gif)
+
 ## Core Features
 
 - **PDF Processing**: Automatic PDF text extraction and chunking
 - **Vector Storage**: Seamless integration with Qdrant for embedding storage
 - **LLM Integration**: Flexible local LLM support with streaming responses
 - **Session Management**: Built-in session handling for document contexts
-- **Middleware Support**: Express-compatible upload middleware
+- **Framework Agnostic**: Can be used with any Node.js framework
 - **Streaming Responses**: Server-Sent Events (SSE) for real-time chat responses
 
 ## Technical Architecture
@@ -32,7 +34,6 @@ const docuRAG = new DocuRAG({
 
 - **Vector Store**: Qdrant for efficient similarity search
 - **Text Processing**: RecursiveCharacterTextSplitter from LangChain
-- **File Handling**: Multer for PDF upload processing
 - **Streaming**: Server-Sent Events for real-time responses
 - **Session Management**: In-memory session tracking with cleanup
 
@@ -53,30 +54,29 @@ npm install docurag
 
 ```javascript
 import { DocuRAG } from 'docurag';
-import express from 'express';
 
-const app = express();
+// Initialize DocuRAG
 const docuRAG = new DocuRAG({
     qdrantUrl: 'http://localhost:6333',
     llmUrl: 'http://localhost:11434'
 });
 
-// File upload endpoint
-app.post('/upload', docuRAG.getUploadMiddleware(), async (req, res) => {
-    const result = await docuRAG.processPDF(req.file);
-    res.json({ sessionId: result.sessionId });
+// Process a PDF buffer
+const { sessionId } = await docuRAG.processPDFBuffer(pdfBuffer, fileName);
+
+// Chat with streaming
+await docuRAG.chat(sessionId, "What is this document about?", {
+    onData: (data) => console.log(data.response),
+    onEnd: () => console.log("Done"),
+    onError: (error) => console.error(error)
 });
 
-// Chat endpoint with streaming
-app.post('/chat', async (req, res) => {
-    const { sessionId, message } = req.body;
-    
-    res.setHeader('Content-Type', 'text/event-stream');
-    await docuRAG.streamChat(sessionId, message, {
-        onData: (data) => res.write(`data: ${JSON.stringify(data)}\n\n`),
-        onEnd: () => res.end()
-    });
-});
+// Or chat without streaming
+const response = await docuRAG.chat(sessionId, "What is this document about?");
+console.log(response);
+
+// Clean up when done
+await docuRAG.cleanup(sessionId);
 ```
 
 ## Configuration Options
@@ -101,22 +101,6 @@ app.post('/chat', async (req, res) => {
 }
 ```
 
-## API Reference
-
-### DocuRAG Class
-
-#### Constructor
-```javascript
-new DocuRAG(config?: DocuRAGConfig)
-```
-
-#### Methods
-- `processPDF(file: Express.Multer.File)`: Process and store PDF document
-- `chat(sessionId: string, message: string)`: Get chat response data
-- `streamChat(sessionId: string, message: string, callbacks: StreamCallbacks)`: Stream chat responses
-- `cleanup(sessionId: string)`: Clean up session resources
-- `getUploadMiddleware()`: Get PDF upload middleware
-
 ## Development Setup
 
 ### Vector Database
@@ -128,6 +112,22 @@ docker run -p 6333:6333 qdrant/qdrant
 ```bash
 # Install from https://ollama.ai
 ollama run llama3.2
+```
+
+## Example Implementation
+
+Check out the [example](./example) directory for a complete Express.js implementation with:
+- Beautiful UI with drag & drop
+- Real-time chat with streaming
+- Voice input support
+- PDF preview
+- Source citations
+
+To run the example:
+```bash
+cd example
+npm install
+npm start
 ```
 
 ## Contributing
@@ -147,8 +147,8 @@ MIT License - see [LICENSE](LICENSE)
 
 - [Qdrant Documentation](https://qdrant.tech/documentation/)
 - [LangChain JS](https://js.langchain.com/)
-- [Express.js](https://expressjs.com/)
-- [Multer](https://github.com/expressjs/multer)
+- [Ollama](https://ollama.ai/)
+- [LLama2](https://ai.meta.com/llama/)
 
 ---
-Developed by [Yannis Kolovos](http://msroot.me/) 
+Built with ❤️ by [Yannis Kolovos](http://msroot.me/) 
