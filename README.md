@@ -1,40 +1,29 @@
 # docuRAG.js
 
-A modern Node.js library for building RAG-powered document question-answering systems. docuRAG.js provides a streamlined solution for implementing Retrieval-Augmented Generation using Qdrant vector database and local LLM integration.
+💡 Chat with your PDF documents
+
+A JavaScript library for building RAG-powered document question-answering systems. 
+docuRAG.js provides a streamlined solution for implementing Retrieval-Augmented Generation using Qdrant vector database and local LLM integration.
+
+
 
 ![docuRAG.js Demo](https://raw.githubusercontent.com/msroot/docuRAG.js/main/docs/demo.gif)
 
 ## Core Features
 
-- **PDF Processing**: Automatic PDF text extraction and chunking
-- **Vector Storage**: Seamless integration with Qdrant for embedding storage
 - **LLM Integration**: Flexible local LLM support with streaming responses
+- **Vector Storage**: Qdrant integration for vector similarity search
+- **Text Processing**: RecursiveCharacterTextSplitter from LangChain
+- **Streaming Responses**: Server-Sent Events (SSE) for real-time chat responses
+- **PDF Processing**: Automatic PDF text extraction and chunking
 - **Session Management**: Built-in session handling for document contexts
 - **Framework Agnostic**: Can be used with any Node.js framework
-- **Streaming Responses**: Server-Sent Events (SSE) for real-time chat responses
 
-## Technical Architecture
-
-### Document Processing Pipeline
-```javascript
-const docuRAG = new DocuRAG({
-    qdrantUrl: 'http://localhost:6333',
-    llmUrl: 'http://localhost:11434',
-    llmModel: 'llama3.2'
-});
-```
-
-### Core Components
-
-- **Vector Store**: Qdrant for efficient similarity search
-- **Text Processing**: RecursiveCharacterTextSplitter from LangChain
-- **Streaming**: Server-Sent Events for real-time responses
-- **Session Management**: In-memory session tracking with cleanup
 
 ## Quick Start
 
 ### Prerequisites
-- Node.js >= 14
+- Modern JavaScript runtime (Node.js 18+ for server-side)
 - Running Qdrant instance
 - Local LLM server (e.g., Ollama with Llama2)
   > ⚠️ Note: Currently tested and optimized for Llama2. Other models may work but are not officially supported.
@@ -97,52 +86,11 @@ await docuRAG.cleanup(sessionId);
 }
 ```
 
-## Development Setup
 
-### Vector Database
-```bash
-docker run -p 6333:6333 qdrant/qdrant
-```
+## Examples
+- [Express Example](./examples/express) - Complete implementation with UI
+- [NestJS Example](./examples/nest) - Same features, NestJS implementation
 
-### LLM Server (using Ollama)
-```bash
-# Install from https://ollama.ai
-ollama run llama3.2
-```
-
-## Example Implementations
-
-Check out our example implementations:
-
-### [Express Example](./examples/express)
-A complete Express.js implementation with:
-- Beautiful UI with drag & drop
-- Real-time chat with streaming
-- Voice input support
-- PDF preview
-- Source citations
-
-### [NestJS Example](./examples/nest)
-A complete NestJS implementation with the same features:
-- Beautiful UI with drag & drop
-- Real-time chat with streaming
-- Voice input support
-- PDF preview
-- Source citations
-
-To run the examples:
-
-```bash
-# For Express
-cd examples/express
-npm install
-npm start
-
-# For NestJS
-cd examples/nest
-npm install
-npm run start:dev
-```
 
 ## Contributing
 
@@ -157,7 +105,7 @@ Areas for contribution:
 
 MIT License - see [LICENSE](LICENSE)
 
-## References
+## Resources
 
 - [Qdrant Documentation](https://qdrant.tech/documentation/)
 - [LangChain JS](https://js.langchain.com/)
