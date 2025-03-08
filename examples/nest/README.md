@@ -1,63 +1,48 @@
 # DocuRAG.js NestJS Example
 
-This is an example implementation showing how to use DocuRAG.js with NestJS and Server-Sent Events (SSE).
-
-## Features
-- PDF file upload and processing
-- Real-time chat with streaming responses
-- Beautiful UI with drag & drop
-- PDF preview
-- Source citations
-
-## Prerequisites
-- Node.js 18+
-- Docker (for Qdrant)
-- Ollama with Llama2
+Minimal NestJS implementation of docuRAG.js.
 
 ## Quick Start
 
-1. Start the required services:
+1. Start required services:
 ```bash
-# Start Qdrant
+# Qdrant
 docker run -p 6333:6333 qdrant/qdrant
 
-# Start Ollama with Llama2
+# Ollama
 ollama run llama2
 ```
 
-2. Install dependencies:
+2. Run the app:
 ```bash
-cd examples/nest
 npm install
-```
-
-3. Run the server:
-```bash
 npm run start:dev
-```
-
-4. Open your browser:
-```
-http://localhost:3000
 ```
 
 ## API Endpoints
 
-- `POST /upload` - Upload and process a PDF file
-- `POST /chat` - Chat with the processed document (SSE)
-- `POST /cleanup` - Clean up resources
+- `POST /upload` - Upload PDF
+- `POST /chat` - Chat with SSE streaming
+- `POST /cleanup` - Cleanup resources
 
-## UI Features
+## Implementation
 
-- Drag and drop PDF upload
-- Real-time chat interface
-- PDF preview panel
-- Source citation display
-- Error handling and loading states
+```typescript
+// chat.controller.ts
+@Controller()
+export class ChatController {
+  @Post('upload')
+  @UseInterceptors(FileInterceptor('pdf'))
+  uploadFile(@UploadedFile() file: Express.Multer.File) {
+    return this.chatService.processPdf(file);
+  }
 
-## Security Features
-
-- File type validation (PDF only)
-- File size limits (10MB)
-- CORS enabled
-- Sanitized error responses 
+  @Post('chat')
+  async chat(@Body('message') message: string, @Res() res: Response) {
+    res.setHeader('Content-Type', 'text/event-stream');
+    await this.chatService.chat(message, (data) => {
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+    });
+  }
+}
+``` 
