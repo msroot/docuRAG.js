@@ -39,14 +39,19 @@ const docuRAG = new DocuRAG({
 - Local LLM server (e.g., Ollama with Llama2)
   > ⚠️ Note: Currently tested and optimized for Llama2. Other models may work but are not officially supported.
 
-### Installation
-
+### Setup
 ```bash
+# Start Qdrant
+docker run -p 6333:6333 qdrant/qdrant
+
+# Start Llama2
+ollama run llama2
+
+# Install docuRAG
 npm install docurag
 ```
 
 ### Basic Usage
-
 ```javascript
 import { DocuRAG } from 'docurag';
 
@@ -66,10 +71,6 @@ await docuRAG.chat(sessionId, "What is this document about?", {
     onError: (error) => console.error(error)
 });
 
-// Or chat without streaming
-const response = await docuRAG.chat(sessionId, "What is this document about?");
-console.log(response);
-
 // Clean up when done
 await docuRAG.cleanup(sessionId);
 ```
@@ -80,32 +81,19 @@ await docuRAG.cleanup(sessionId);
 {
     // Vector Store Configuration
     qdrantUrl: string,      // Qdrant server URL
-    vectorSize: number,     // Embedding vector size (default: 3072)
-                           // Size depends on your LLM model:
-                           // - OpenAI ada-002: 1536
-                           // - Llama2: 3072 (4096 for 70B model)
-                           // - Mistral: 1024
-                           // See: https://qdrant.tech/documentation/concepts/vectors/
-    vectorDistance: string, // Distance metric (default: 'Cosine')
-                           // Available options:
-                           // - 'Cosine': Best for semantic similarity, normalizes vector magnitude
-                           // - 'Dot': Similar to cosine but considers magnitude
-                           // - 'Euclid': Geometric distance between vectors
-                           // - 'Manhattan': Fast "city block" distance, good for high dimensions
-                           // See: https://qdrant.tech/documentation/concepts/search/#metrics
+    vectorSize: number,     // Default: 3072
+    vectorDistance: string, // Default: 'Cosine'
 
     // LLM Configuration
     llmUrl: string,        // LLM server URL
-    llmModel: string,      // Model name (default: 'llama3.2')
-                          // Note: Currently tested only with Llama2
-                          // Other models may work but are not officially supported
+    llmModel: string,      // Default: 'llama3.2'
 
     // Text Processing
-    chunkSize: number,     // Token chunk size (default: 1000)
-    chunkOverlap: number,  // Overlap between chunks (default: 200)
+    chunkSize: number,     // Default: 1000
+    chunkOverlap: number,  // Default: 200
 
     // Search Configuration
-    searchLimit: number    // Context chunks to retrieve (default: 3)
+    searchLimit: number    // Default: 3
 }
 ```
 
