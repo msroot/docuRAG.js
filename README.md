@@ -6,8 +6,12 @@ A JavaScript library for building RAG-powered document question-answering system
 docuRAG.js provides a streamlined solution for implementing Retrieval-Augmented Generation using Qdrant vector database and local LLM integration.
 
 
-
 ![docuRAG.js Demo](https://raw.githubusercontent.com/msroot/docuRAG.js/main/docs/demo.gif)
+
+
+[![npm version](https://img.shields.io/npm/v/docurag.svg)](https://www.npmjs.com/package/docurag)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 
 ## Core Features
 
