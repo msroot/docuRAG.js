@@ -1,6 +1,6 @@
 import express from 'express';
 import multer from 'multer';
-import { DocuRAG } from '../../index.js';
+import { DocuRAG } from 'docurag';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DocuRAG } from '../../../index.js';
+import { DocuRAG } from 'docurag';
 
 @Injectable()
 export class ChatService {
